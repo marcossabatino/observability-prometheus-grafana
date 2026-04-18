@@ -1,6 +1,6 @@
-# Observability Portfolio: EKS + Prometheus + Grafana + APM
+# Observability Stack: EKS + Prometheus + Grafana + APM
 
-A complete, production-grade observability demonstration using open-source tools. Equivalent to a Datadog APM experience with Prometheus metrics, Grafana dashboards, and distributed tracing via Grafana Tempo.
+A complete, production-grade observability solution using open-source tools. Provides a Datadog APM-equivalent experience with Prometheus metrics, Grafana dashboards, and distributed tracing via Grafana Tempo.
 
 ## Architecture
 
@@ -424,16 +424,16 @@ kubectl logs -n apps -l app=load-tester -f
 1. Target services are reachable (curl from load-tester pod)
 2. Environment variables set correctly (`TARGETS`, `BASE_RPS`)
 
-## Learning Path
+## Getting Started
 
-This project is designed to progressively teach observability:
+Quick walkthrough to understand the observability stack:
 
-1. **Start here:** Open Grafana, click "APM Overview" dashboard
-2. **Understand metrics:** Identify request rate, error rate, latency on one service
-3. **Explore tracing:** Click a latency spike dot → see the trace
-4. **Load test:** Scale load-tester replicas, watch RPS increase
-5. **Drill-down:** Service Detail dashboard, find slowest endpoints
-6. **Simulate problems:** Kill a pod, watch error rate spike in dashboard
+1. **Open Grafana:** Navigate to the APM Overview dashboard
+2. **View metrics:** Check request rate, error rate, and latency per service
+3. **Explore traces:** Click a latency spike dot to view the distributed trace
+4. **Generate load:** Scale the load-tester replicas to increase request volume
+5. **Drill-down:** Use Service Detail dashboard to identify slowest endpoints
+6. **Test resilience:** Kill a pod and observe error rate changes in dashboards
 
 ## Cleanup
 
@@ -462,4 +462,4 @@ Takes ~5-10 minutes.
 
 ---
 
-Built for portfolio demonstration and learning.
+Open source observability stack for production environments.
