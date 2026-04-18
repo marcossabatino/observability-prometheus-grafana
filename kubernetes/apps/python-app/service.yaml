@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-app
+  namespace: apps
+  labels:
+    app: python-app
+spec:
+  type: ClusterIP
+  selector:
+    app: python-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

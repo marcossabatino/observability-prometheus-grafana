@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-tester
+  namespace: apps
+  labels:
+    app: load-tester
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-tester
+  template:
+    metadata:
+      labels:
+        app: load-tester
+    spec:
+      containers:
+        - name: load-tester
+          image: "{{ REGISTRY }}/load-tester:latest"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TARGETS
+              value: "http://java-app.apps.svc:8080,http://go-app.apps.svc:8080,http://python-app.apps.svc:8080,http://nginx.apps.svc:80"
+            - name: BASE_RPS
+              value: "10"
+            - name: HEALTH_RATIO
+              value: "0.7"
+            - name: SLOW_RATIO
+              value: "0.2"
+            - name: ERROR_RATIO
+              value: "0.1"
+          ports:
+            - name: metrics
+              containerPort: 9090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi

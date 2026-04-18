@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: python-app
+  namespace: apps
+  labels:
+    app: python-app
+    release: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: python-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-tester
+  namespace: apps
+  labels:
+    app: load-tester
+spec:
+  type: ClusterIP
+  selector:
+    app: load-tester
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: metrics

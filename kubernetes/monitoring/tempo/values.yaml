@@ -1,0 +1,113 @@
+# Grafana Tempo Helm Values
+# Reference: https://github.com/grafana/helm-charts/tree/main/charts/tempo
+
+fullnameOverride: tempo
+namespaceOverride: monitoring
+
+# Tempo configuration
+tempo:
+  # Use single-binary mode for simplicity
+  mode: single-binary
+
+  # Single-binary configuration
+  config:
+    # General settings
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 4317
+
+    # Distributor (receives traces)
+    distributor:
+      rate_limiting:
+        enabled: true
+        rate_limit_bytes: 10000000
+
+    # Ingester
+    ingester:
+      trace_idle_period: 10s
+      max_block_duration: 5m
+
+    # Compactor
+    compactor:
+      compaction:
+        compacted_block_retention: 10m
+
+    # Storage
+    storage:
+      trace:
+        backend: local
+        wal:
+          path: /var/tempo/wal
+        local:
+          path: /var/tempo/blocks
+
+    # Metrics
+    metrics_generator:
+      enabled: false  # Disable for simplicity
+
+    # Query configuration
+    querier:
+      frontend_worker:
+        frontend_address: tempo.monitoring.svc:3100
+
+  # Receivers - what protocols to listen on
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  # Security context
+  securityContext:
+    fsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+
+# Persistence
+persistence:
+  enabled: true
+  storageClassName: gp2
+  size: 5Gi
+
+# Resource requests
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+# Service configuration
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    otlp-grpc:
+      port: 4317
+    otlp-http:
+      port: 4318
+    jaeger-grpc:
+      port: 14250
+    jaeger-thrift-http:
+      port: 14268
+    zipkin:
+      port: 9411
+    metrics:
+      port: 3100
+    tempo:
+      port: 3100
+
+# Rollout strategy
+rolloutStrategy:
+  type: RollingUpdate
+
+# Replicas
+replicas: 1
+
+# Pod annotations for Prometheus scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3100"
+  prometheus.io/path: "/metrics"

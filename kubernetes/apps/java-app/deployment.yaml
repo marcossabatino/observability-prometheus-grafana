@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app
+  namespace: apps
+  labels:
+    app: java-app
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: java-app
+  template:
+    metadata:
+      labels:
+        app: java-app
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: java-app
+          image: "{{ REGISTRY }}/java-app:latest"
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # OTel Java Agent configuration
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/opt/otel-javaagent.jar"
+
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
+
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+
+            - name: OTEL_SERVICE_NAME
+              value: "java-app"
+
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+
+            - name: OTEL_TRACE_SAMPLER
+              value: "always_on"
+
+            - name: SPRING_APPLICATION_NAME
+              value: "java-app"
+
+          # Resource requests
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+
+          # Liveness probe
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Readiness probe
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          # Security context
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+
+      # Pod disruption budget
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - java-app
+                topologyKey: kubernetes.io/hostname

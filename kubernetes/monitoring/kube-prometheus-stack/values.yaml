@@ -1,0 +1,189 @@
+# Kube-Prometheus-Stack Helm Values
+# Reference: https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
+
+fullnameOverride: kube-prometheus
+namespaceOverride: monitoring
+
+# Prometheus Configuration
+prometheus:
+  prometheusSpec:
+    # Enable exemplar storage for trace linking
+    enableFeatures:
+      - exemplar-storage
+
+    # Storage configuration
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp2
+          resources:
+            requests:
+              storage: 20Gi
+
+    # Resource requests (conservative for t3.medium nodes)
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+
+    # Service monitor selector - IMPORTANT: apps must have release=kube-prometheus label
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector:
+      matchLabels:
+        release: kube-prometheus
+
+    # Pod monitor selector
+    podMonitorSelectorNilUsesHelmValues: false
+
+    # Retention settings
+    retention: 30d
+    retentionSize: "18GB"
+
+    # Enable admin API
+    enableAdminAPI: true
+
+# Grafana Configuration
+grafana:
+  enabled: true
+
+  # Admin credentials (change in production)
+  adminPassword: observability123
+
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: gp2
+    size: 5Gi
+
+  # Sidecar for auto-loading dashboards from ConfigMaps
+  sidecar:
+    dashboards:
+      enabled: true
+      defaultDashboardsEnabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: true
+      label: grafana_datasource
+      labelValue: "1"
+
+  # Datasources including Tempo
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # Prometheus (default)
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-prometheus:9090
+          access: proxy
+          isDefault: true
+          uid: prometheus
+
+        # Grafana Tempo for tracing
+        - name: Tempo
+          type: tempo
+          url: http://tempo.monitoring.svc.cluster.local:3100
+          access: proxy
+          uid: tempo
+          jsonData:
+            # Link traces back to metrics
+            tracesToMetrics:
+              datasourceUid: prometheus
+              tags:
+                - key: service.name
+                  value: service
+
+            # Link metrics to traces (optional)
+            metricsToTraces:
+              datasourceUid: prometheus
+
+            # Service map configuration
+            serviceMap:
+              datasourceUid: prometheus
+
+            # Search configuration
+            search:
+              hide: false
+
+            # Node graph configuration
+            nodeGraph:
+              enabled: true
+
+  # Pre-configured dashboards in Grafana
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 10
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+# AlertManager Configuration
+alertmanager:
+  enabled: false  # Disabled for portfolio, saves ~100MB RAM
+
+# Prometheus Operator - CRDs and RBAC
+prometheusOperator:
+  enabled: true
+  manageCrds: true
+
+# Node Exporter
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics
+kubeStateMetrics:
+  enabled: true
+
+# Prometheus Node Exporter
+prometheus-node-exporter:
+  hostNetwork: true
+  hostPID: true
+
+# Default Prometheus rules
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false
+    configReloaders: true
+    general: true
+    groups: true
+    kubeApiserver: true
+    kubeApiserverAvailability: true
+    kubeApiserverSlos: true
+    kubelet: true
+    kubeProxy: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: false
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeSchedulerAlerting: true
+    kubeStateMetrics: true
+    network: true
+    node: true
+    prometheus: true
+    prometheusOperator: true
+
+# Default ServiceMonitors
+defaultServiceMonitors:
+  enabled: true
+
+# Prometheus Scrape Interval
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 30s
+    evaluationInterval: 30s

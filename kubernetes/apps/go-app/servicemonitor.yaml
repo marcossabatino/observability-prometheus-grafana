@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: go-app
+  namespace: apps
+  labels:
+    app: go-app
+    release: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: go-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

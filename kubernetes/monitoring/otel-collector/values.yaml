@@ -1,0 +1,151 @@
+# OpenTelemetry Collector Helm Values
+# Reference: https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector
+
+fullnameOverride: otel-collector
+namespaceOverride: monitoring
+
+# Deployment mode (Deployment, DaemonSet, StatefulSet)
+mode: deployment
+
+# Replicas for deployment mode
+replicaCount: 1
+
+# OpenTelemetry Collector configuration
+config:
+  # Receivers define how to receive data
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  # Processors transform and filter data
+  processors:
+    # Memory limiter MUST be first to prevent OOM
+    memory_limiter:
+      check_interval: 1s
+      limit_mib: 512
+      spike_limit_mib: 128
+
+    batch:
+      send_batch_size: 1000
+      timeout: 10s
+
+    # Span processor for attributes
+    attributes:
+      actions:
+        - key: service.version
+          value: 1.0.0
+          action: upsert
+
+  # Exporters send processed data to backends
+  exporters:
+    # Export traces to Tempo
+    otlp/tempo:
+      client:
+        endpoint: tempo.monitoring.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+    # Export metrics to Prometheus (optional)
+    prometheusremotewrite:
+      endpoint: http://kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+      tls:
+        insecure: true
+
+  # Logging exporter for debugging
+  logging:
+    loglevel: debug
+
+  # Service defines the pipelines
+  service:
+    pipelines:
+      # Traces pipeline: receive -> process -> export to Tempo
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch, attributes]
+        exporters: [otlp/tempo, logging]
+
+      # Metrics pipeline (optional): send to Prometheus
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [prometheusremotewrite, logging]
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 65532
+  runAsUser: 65532
+  runAsNonRoot: true
+
+# Container security context
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# Resource requests
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+# Service port configuration
+service:
+  enabled: true
+  type: ClusterIP
+
+  # OTLP gRPC receiver
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+
+  # OTLP HTTP receiver
+  otlphttp:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+
+  # Prometheus metrics endpoint
+  metrics:
+    enabled: true
+    containerPort: 8888
+    servicePort: 8888
+    protocol: TCP
+
+# Pod annotations for Prometheus scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8888"
+  prometheus.io/path: "/metrics"
+
+# Labels for pod selection
+podLabels:
+  app.kubernetes.io/name: otel-collector
+
+# Auto-scaling (optional)
+autoscaling:
+  enabled: false
+
+# Tolerations for node pools
+tolerations: []
+
+# Node affinity
+affinity: {}
+
+# Additional volumes
+extraVolumes: []
+
+# Extra environment variables
+extraEnv:
+  - name: GOGC
+    value: "80"
