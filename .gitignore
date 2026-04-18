@@ -1,0 +1,42 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraform.lock.hcl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes
+kubeconfig.yaml
+
+# Docker
+.dockercfg
+.docker/
+
+# Logs
+*.log
+
+# Dependencies
+node_modules/
+vendor/
+.gradle/
+.m2/
+
+# Build artifacts
+dist/
+build/
+target/
+out/
+__pycache__/
+*.egg-info/
