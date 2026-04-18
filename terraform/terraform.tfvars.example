@@ -1,0 +1,11 @@
+region              = "us-east-2"
+environment         = "portfolio"
+cluster_name        = "observability-cluster"
+vpc_cidr            = "10.0.0.0/16"
+
+# Node configuration
+node_instance_type  = "t3.medium"
+node_desired_count  = 3
+node_min_count      = 2
+node_max_count      = 5
+enable_spot_instances = true
